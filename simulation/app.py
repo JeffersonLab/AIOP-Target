@@ -77,10 +77,10 @@ if "beam_current_array" not in st.session_state:
 col1, col2 = st.columns([1, 1])
 with col1:
     if st.button("Increase Frequency"):
-        st.session_state.sim.microwave_frequency += 0.1
+        st.session_state.sim.microwave_frequency += 0.001
 with col2:
     if st.button("Decrease Frequency"):
-        st.session_state.sim.microwave_frequency -= 0.1
+        st.session_state.sim.microwave_frequency -= 0.001
 
 # Start/Stop simulation buttons
 col3, col4 = st.columns([1, 1])

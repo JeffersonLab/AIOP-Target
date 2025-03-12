@@ -25,9 +25,10 @@ class Simulation:
         beam_area,          # in cm²
         microwave_frequency=140.1,
         pmax=0.95,          # e.g. 95%
-        phi=25.6E15 * 1.13,           # from victoria's thesis (page 88). the raster area was assumed to be 0.6 cm 
+        phi=25.6E15 * 1.13,   # from victoria's thesis (page 88). the raster area was assumed to be 0.6 cm 
         trip_rate_per_hour=12,
         trip_duration_min=(20, 300),
+        recovery_time_constant=300
     ):
         """
         :param beam_current: initial beam current in A
@@ -39,7 +40,6 @@ class Simulation:
         :param trip_rate_per_hour: approximate random beam trips/hour
         :param trip_duration_min: (min_sec, max_sec) for each random trip
         """
-
         # Store parameters
         self.beam_current = beam_current
         self.time_step = time_step
@@ -47,6 +47,7 @@ class Simulation:
         self.microwave_frequency = microwave_frequency
         self.pmax = 0.95
         self.phi = 25.6E15 * 1.13
+        self.recovery_time_constant = recovery_time_constant
 
         # Simulation state
         self.accumulated_dose = 0.0   # in e-/cm²
@@ -68,7 +69,6 @@ class Simulation:
         Optionally update parameters via an 'action' dict, e.g.:
           {'beam_current': 2e-9, 'microwave_frequency': 139.5}
         """
-
         # 1. RL/programmatic updates
         if action:
             if 'beam_current' in action:
@@ -93,22 +93,34 @@ class Simulation:
             else:
                 current_beam = self.beam_current
 
-        # 3. Dose increment if beam is on
         dDose = 0.0
         if current_beam > 0.0:
             dDose = (current_beam * self.time_step) / (ELECTRON_CHARGE * self.beam_area)
             self.accumulated_dose += dDose
 
-        # 4. Single-exponential degrade
-        base_pol = single_exponential_polarization(
-            self.accumulated_dose,
-            self.pmax,
-            self.phi
-        )
+            base_pol = single_exponential_polarization(
+                self.accumulated_dose,
+                self.pmax,
+                self.phi
+            )
+        else:  # no beam, polarization will increase slightly
+            previous_pol = self.polarization
+            delta_pol = (self.pmax - previous_pol) * (1.0 - math.exp(-self.time_step / self.recovery_time_constant))
+            base_pol = previous_pol + delta_pol
 
         # 5. Optional microwave effect
         #    e.g. small linear shift each step
-        microwave_effect = -(self.microwave_frequency - 140.1) * 0.0001
+        # If the accumulated dose is above 1E15, do not apply microwave adjustments.
+        if self.accumulated_dose > 1E15:
+            microwave_effect = 0.0
+        else:
+           # Lorentzian resonance parameters
+            resonance_center = 140.1   # GHz, center frequency of resonance
+            resonance_width = 0.03       # GHz, how wide the resonance peak is
+            resonance_strength = 0.3     # Maximum polarization loss outside resonance
+            
+            freq_diff = self.microwave_frequency - resonance_center
+            microwave_effect = -resonance_strength * (freq_diff**2 / (freq_diff**2 + resonance_width**2))
 
         # Debug prints
         print("=== Simulation Debug ===")
