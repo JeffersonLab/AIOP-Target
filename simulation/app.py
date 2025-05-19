@@ -91,7 +91,7 @@ with col4:
     if st.button("Stop Simulation"):
         st.session_state.running = False
 
-st.write(f"### Current Microwave Frequency: {st.session_state.sim.microwave_frequency:.1f} GHz")
+st.write(f"### Current Microwave Frequency: {st.session_state.sim.microwave_frequency:.3f} GHz")
 
 # Create containers for the plots (3 rows, single column)
 polarization_plot = st.empty()

@@ -81,7 +81,9 @@ class Simulation:
             # If the trip duration is over, restore beam
             if (self.time_elapsed - self.trip_start) > self.trip_duration:
                 self.in_trip = False
-            current_beam = 0.0 if self.in_trip else self.beam_current
+                current_beam = 0.0
+            else:
+                current_beam = 0.0
         else:
             # Probability of a new trip
             p_trip = self.trip_prob_per_step * self.time_step
@@ -103,10 +105,11 @@ class Simulation:
                 self.pmax,
                 self.phi
             )
+            
         else:  # no beam, polarization will increase slightly
             previous_pol = self.polarization
             delta_pol = (self.pmax - previous_pol) * (1.0 - math.exp(-self.time_step / self.recovery_time_constant))
-            base_pol = previous_pol + delta_pol
+            base_pol = previous_pol + 0.01*delta_pol
 
         # 5. Optional microwave effect
         #    e.g. small linear shift each step
